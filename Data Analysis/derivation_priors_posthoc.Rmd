@@ -1,0 +1,74 @@
+---
+title: "Derivations_priors_posthoc"
+output: 
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## ANOVA formulation
+
+if an ANOVA is given by: 
+
+$$Y_{ijk} = \mu + \alpha_i + \beta_j + (\alpha\beta)_{ij} + \varepsilon_{ijk}$$
+To express the two‑way ANOVA in a linear form, facilitating model specification and fit, we code the predictors as binary indicators (environment coded as 0 = PE and 1 = EE/treatment coded as 0 = SAL and 1 = CVAD). this gives us the following formulation:
+
+$$
+Y_{ijk} = \mu + \beta_t * treatment_i + \beta_{env} * environment_j + \beta_{int} * (treatment_i * environment_j)+ \varepsilon_{ijk}
+$$
+This formulation is straightforward to fit (in a bayesian framework) and gives an interpretable matrix in which each cell mean is represented by a simple combination of the model parameters. We simply substitute the binary predictor values into the linear model, which makes it immediately clear which parameters determine each cell mean:
+
+$$ 
+
+(1)\quad SAL-PE(0,0) = \mu \\
+(2)\quad CVAD-PE(1,0) = \mu + \beta_t \\
+(3)\quad SAL-EE(0,1) = \mu + \beta_{env}\\
+(4)\quad CVAD-EE(1,1) = \mu + \beta_t+ \beta_{env}+\beta_{int}\\
+
+$$
+*Note.* We take the mean so we assume that in each cell $\epsilon_{ijk}$ sums to 0
+
+
+We fit this linear model in a Bayesian framework, assigning priors to all parameters $\beta \sim N(0,\sigma)$ with $\sigma$ being the variance. Because the treatment coefficient $\beta_t$ reflects the treatment effect specifically in the PE condition, we cannot interpret its deviation from zero as an ANOVA-style main effect. In ANOVA, a main effect is defined as the average effect of treatment across environments (and vice versa), which in this parameterization is not reflected by only $\beta_t$. However, because the model yields posterior distributions for all cell means, we can directly compute the main effect of treatment as the average treatment difference across both environments:
+$$
+
+ME_t = mean(CVAD) - mean(SAL)\\
+$$
+where:
+$$
+mean(CVAD) = \frac{\text{mean}(\text{CVAD, EE}) \;+\; \text{mean}(\text{CVAD, PE})}{2}\\
+mean(SAL) = \frac{\text{mean}(\text{SAL, EE}) \;+\; \text{mean}(\text{SAL, PE})}{2}
+$$
+From our model's cell means we can fill this in as:
+$$
+mean(CVAD) = \frac{2(\mu + \beta_{t}) + \beta_{\text{env}} + \beta_{\text{int}}}{2}\\
+mean(SAL) = \frac{2\mu + \beta_{\text{env}}}{2}
+$$
+Combining these gives us:
+$$
+ME_t = \frac{(2(\mu + \beta_{t}) + \beta_{\text{env}} + \beta_{\text{int}}) - (2\mu+\beta_{env})}{2}
+$$
+Which after simplifying gives:
+$$
+ME_t = \beta_t + \frac{\beta_{int}}{2}
+$$
+similarly for environment we get: 
+$$
+ME_{env} = \beta_{env} + \frac{\beta_{int}}{2}
+$$
+and for interaction:
+$$
+IE = \beta_{int}
+$$
+Say that now we want to compute BF. Because ANOVA main effects are linear combinations of coefficients, we must compute the Savage–Dickey ratio on the induced prior and posterior of that contrast rather than on any single β. However, because we use normal priors on the coefficients, the induced prior on any linear contrast (and thus on the ANOVA main effects) is also normal, which makes the new prior straightforward to derive analytically.
+
+$$
+
+ME \sim N(0, \sigma) + 0.5*N(0, \sigma)\\
+ME \sim N(0, \sigma)+N(0,0.5^2*\sigma)\\
+ME \sim N(0,(0.5^2*\sigma)+\sigma)\\
+
+$$
+
