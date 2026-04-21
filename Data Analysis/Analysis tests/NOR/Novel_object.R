@@ -16,7 +16,7 @@
 ## Load in packages##
 #####################
 pacman::p_load(tidyverse, ggplot2, here, emmeans, logspline, cmdstanr, posterior, rstanarm, HDInterval)
-path = here("Data Analysis", "Analysis tests", "OF", "fits")
+path = here("Data Analysis", "Analysis tests", "NOR", "fit")
 source(here("Data Analysis", "Utility.R"))
 
 ########################################
@@ -49,27 +49,27 @@ con = emmeans(ANOVA[[3]], pairwise ~ treatment*env, adjust = "tukey")
 ############################
 ## Two‑way ANOVA Bayesian ##
 ############################
-mod = cmdstan_model(here("Data Analysis", "Analysis tests", "OF", "ANOVA_OF.stan"))
-path_PL = here(path, "fit_OF_PL.rds")
+mod = cmdstan_model(here("Data Analysis", "Analysis tests", "NOR", "ANOVA_NOR.stan"))
+path_PL = here(path, "fit_NOR_exp.rds")
 
-fit = two_way_bayes(mod, data, "Distance..m.", path_PL, 7)
+fit = two_way_bayes(mod, data, "total_exploration", path_PL, 7)
 
 ######################
-## Periphery T freq ##
+##    NOP freq      ##
 ######################
 
-ANOVA = two_way_aov(data, "treatment", "env", "Periphery...time..s.")
+ANOVA = two_way_aov(data, "treatment", "env", "NOP")
 
 con_1 = emmeans(ANOVA[[3]], pairwise ~ treatment*env, adjust = "tukey")
 
 #######################################
-## Two‑way ANOVA  periphery Bayesian ##
+## Two‑way ANOVA NOP Bayesian        ##
 #######################################
 
-mod = cmdstan_model(here("Data Analysis", "Analysis tests", "OF", "ANOVA_OF.stan"))
-path_PL = here(path, "fit_OF_PT.rds")
+mod = cmdstan_model(here("Data Analysis", "Analysis tests", "NOR", "ANOVA_NOR.stan"))
+path_PL = here(path, "fit_NOR_NOP.rds")
 
-fit_1 = two_way_bayes(mod, data, "Periphery...time..s.", path_PL, 7)
+fit_1 = two_way_bayes(mod, data, "NOP", path_PL, 7)
 
 ######################
 ## central T freq   ##

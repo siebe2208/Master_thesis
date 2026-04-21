@@ -78,3 +78,16 @@ get_bf = function(prior,post){
   
   return(BF_01)
 }
+
+# Multilevel ANOVA
+ANOVA_multi = function(data, fac1, fac2, out, level){
+  f = as.formula(paste(out, "~", fac1, "*", fac2, "+(1|", level, ")"))
+  
+  fit = lmer(f, data)
+  
+  sum = summary(fit)
+  
+  ES = r2beta(fit, method = "nsj")
+  
+  return(list(summary = sum, ES =ES, fit = fit))
+}

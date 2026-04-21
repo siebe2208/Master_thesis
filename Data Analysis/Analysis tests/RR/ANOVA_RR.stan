@@ -1,40 +1,28 @@
 data {
   int<lower=0> N;
-  int<lower =0> J; 
-  
-  array[N] int animal;
   vector[N] y;
   vector[N] treatment;
   vector[N] environment;
-  
 }
 
 parameters {
-  real mu_alpha;
-  real<lower=0> sigma_alpha;
+  real mu;
   real beta_int;
   real beta_env;
   real beta_t;
-  real<lower=0> sigma;
-  vector[J] mu;
+  real sigma;
 }
 
-
 model {
+  mu ~ normal(0, 1); 
   sigma ~ exponential(1);
-  
-  mu_alpha ~ normal(0,1);
-  sigma_alpha ~ exponential(1);
   
   beta_int ~ normal(0,1);
   beta_env ~ normal(0,1);
   beta_t ~ normal(0,1);
   
-  mu ~ normal(mu_alpha, sigma_alpha);
-  
   for (i in 1:N){
-    
-    real out_mu = mu[animal[i]] + beta_t*treatment[i] + beta_env*environment[i] + beta_int*(environment[i]*treatment[i]); 
+    real out_mu = mu + beta_t*treatment[i] + beta_env*environment[i] + beta_int*(environment[i]*treatment[i]); 
     y[i] ~ normal(out_mu, sigma);
   }
 

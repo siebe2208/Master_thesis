@@ -7,28 +7,49 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(cmdstanr, tidyverse, here, ggplot2, future, future.apply)
+pacman::p_load(cmdstanr, tidyverse, here, ggplot2, future, future.apply, bayesplot)
 ```
 
 
 ## simulate 1 dataset 
 ```{r}
-N = 34
+J = 34
+n = 3
 
-mean = rnorm(1, 40, 6)
-sigma = rexp(1, rate = 1)
+N = n*J
 
-beta_int = rnorm(1,0,15)
-beta_env = rnorm(1,0,15)
-beta_t = rnorm(1,0,15)
+pop_mean = rnorm(1, 0, 1)
+pop_sigma = rexp(1, rate = 1)
 
-treatment = sample(c(rep(0, 17), rep(1, 17)))
-env = sample(c(rep(0, 17), rep(1, 17)))
+sigma_res = rexp(1, rate = 1)
 
-mu = mean + beta_env*env + beta_t*treatment + beta_int*(treatment*env)
-y = rnorm(N, mu, sigma)
+rand_intercepts = rnorm(J, pop_mean, pop_sigma)
 
-sim = c(NA, mean, beta_int, beta_env, beta_t, sigma)
+animal = rep(1:J, each = n)               
+
+beta_int = rnorm(1,0,1)
+beta_env = rnorm(1,0,1)
+beta_t = rnorm(1,0,1)
+
+treatment = sample(c(0, 1), J, replace = TRUE)
+env       = sample(c(0, 1), J, replace = TRUE)
+
+treatment = treatment[animal]      
+env       = env[animal] 
+
+mu =rand_intercepts[animal] + beta_env*env + beta_t*treatment + beta_int*(treatment*env)
+y = rnorm(N, mu, sigma_res)
+
+
+dat = data.frame(
+  animal    = animal,
+  trial     = rep(1:n, times = J),
+  y         = y,
+  treatment = treatment,
+  env       = env
+)
+
+true_values = c(NA,pop_mean,pop_sigma,beta_int,beta_env,beta_t,sigma_res,rand_intercepts = rand_intercepts, rep(NA, times = 11))
 
 
 ```
@@ -36,16 +57,16 @@ sim = c(NA, mean, beta_int, beta_env, beta_t, sigma)
 
 ## Fit 1 dataset
 ```{r pressure, echo=FALSE}
-data_stan = list(N = N, y = y, treatment = treatment, environment=env)
+data_stan = list(N = N, y = y, treatment = treatment, environment=env, J =J, animal = animal)
 
-model = cmdstan_model(here("Data Analysis", "Analysis tests", "two_way_ANOVA.stan"))
+model = cmdstan_model(here("Data Analysis", "Analysis tests", "TF", "ANOVA_TF.stan"))
 
-fit = model$sample(data = data_stan, iter_warmup =1000, iter_sampling = 2000, chains = 4, parallel_chains = 4)
+fit = model$sample(data = data_stan, iter_warmup =500, iter_sampling = 500, chains = 4, parallel_chains = 4, adapt_delta = 0.95, max_treedepth = 12)
 ```
 ## evaluate fit
 ```{r}
 summary = fit$summary()
-summary$sim = sim
+summary$sim = true_values
 
 summary
 
@@ -59,31 +80,49 @@ summary
 
 ## Generate multiple data sets
 ```{r}
-sim = 200
+sim = 100
 
 sim_list = list()
 
 for(i in 1:sim){
   
-  N = 34
-
-  mean = rnorm(1, 40, 6)
-  sigma = rexp(1, rate = 1)
-
-  beta_int = rnorm(1,0,7)
-  beta_env = rnorm(1,0,7)
-  beta_t = rnorm(1,0,7)
-
-  treatment = sample(c(rep(0, 17), rep(1, 17)))
-  env = sample(c(rep(0, 17), rep(1, 17)))
-
-  mu = mean + beta_env*env + beta_t*treatment + beta_int*(treatment*env)
-  y = rnorm(N, mu, sigma)
+    J = 34
+    n = 3
+    
+    N = n*J
+    
+    pop_mean = rnorm(1, 0, 1)
+    pop_sigma = rexp(1, rate = 1)
+    
+    sigma_res = rexp(1, rate = 1)
+    
+    rand_intercepts = rnorm(J, pop_mean, pop_sigma)
+    
+    animal = rep(1:J, each = n)               
+    
+    beta_int = rnorm(1,0,1)
+    beta_env = rnorm(1,0,1)
+    beta_t = rnorm(1,0,1)
+    
+    treatment = sample(c(0, 1), J, replace = TRUE)
+    env       = sample(c(0, 1), J, replace = TRUE)
+    
+    treatment = treatment[animal]      
+    env       = env[animal] 
+    
+    mu =rand_intercepts[animal] + beta_env*env + beta_t*treatment + beta_int*(treatment*env)
+    y = rnorm(N, mu, sigma_res)
+    
+    
+    sim_data  = data.frame(animal    = animal,trial     = rep(1:n, times = J),y         = y,
+    treatment = treatment,env       = env)
+    
+ 
+    true_values = c(NA,pop_mean,pop_sigma,beta_int,beta_env,beta_t,sigma_res,rand_intercepts = rand_intercepts, rep(NA, times = 11))
   
-  sim_data = data.frame(treatment = treatment, env = env, y = y, mean = mean, 
-                        beta_int = beta_int, beta_env = beta_env, beta_t = beta_t, sigma = sigma)
+
   
-  sim_list[[i]] = sim_data
+    sim_list[[i]] = list(sim_data = sim_data, sim_vals = true_values)
   
 }
 
@@ -97,21 +136,21 @@ use_cores = max(1, n_cores - 4)
 
 plan(multisession, workers = use_cores)
 
-model = cmdstan_model(here("Data Analysis", "Analysis tests", "two_way_ANOVA.stan"))
+model = cmdstan_model(here("Data Analysis", "Analysis tests", "TF", "ANOVA_TF.stan"))
 
 fits = future_lapply(seq_len(sim), function(i) {
-  df = sim_list[[i]]
+  df = sim_list[[i]][[1]]
   
-  data_stan <- list(N = 34,y = df$y,treatment = df$treatment,environment = df$env)
+  data_stan <- list(N = 102,y = df$y,treatment = df$treatment,environment = df$env, animal = df$animal,J=34)
   
-  fit <- model$sample(data = data_stan,iter_warmup = 1000,iter_sampling = 2000,chains = 4,parallel_chains = 4,refresh = 0)
+  fit <- model$sample(data = data_stan,iter_warmup = 1000,iter_sampling = 2000,chains = 4,parallel_chains = 4,refresh = 0, adapt_delta = 0.95)
   
   summary <- fit$summary()
   
-  param_l <- with(df, c(NA,mean[1],beta_int[1],beta_env[1],beta_t[1],sigma[1]))
   
-  summary$sim <- param_l
-  summary})
+  summary$sim <- sim_list[[i]][[2]]
+  summary
+  })
 ```
 
 
