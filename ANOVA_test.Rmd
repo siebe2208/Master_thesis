@@ -49,7 +49,7 @@ dat = data.frame(
   env       = env
 )
 
-true_values = c(NA,pop_mean,pop_sigma,beta_int,beta_env,beta_t,sigma_res,rand_intercepts = rand_intercepts, rep(NA, times = 11))
+true_values = c(NA,pop_mean,pop_sigma,beta_int,beta_env,beta_t,sigma_res,rep(NA, times = 34), rand_intercepts = rand_intercepts, rep(NA, times = 11))
 
 
 ```

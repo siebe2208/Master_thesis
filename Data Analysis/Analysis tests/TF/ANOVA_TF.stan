@@ -16,9 +16,13 @@ parameters {
   real beta_env;
   real beta_t;
   real<lower=0> sigma;
-  vector[J] mu;
+  vector[J] mu_raw;
 }
 
+transformed parameters{ 
+  vector[J] mu;
+  mu = mu_alpha + sigma_alpha*mu_raw;
+  }
 
 model {
   sigma ~ exponential(1);
@@ -30,7 +34,7 @@ model {
   beta_env ~ normal(0,1);
   beta_t ~ normal(0,1);
   
-  mu ~ normal(mu_alpha, sigma_alpha);
+  mu_raw ~ normal(0, 1);
   
   for (i in 1:N){
     
