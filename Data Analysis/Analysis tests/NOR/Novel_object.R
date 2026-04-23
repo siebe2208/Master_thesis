@@ -15,7 +15,7 @@
 #####################
 ## Load in packages##
 #####################
-pacman::p_load(tidyverse, ggplot2, here, emmeans, logspline, cmdstanr, posterior, rstanarm, HDInterval)
+pacman::p_load(tidyverse, ggplot2, here, emmeans, logspline, cmdstanr, posterior, rstanarm, HDInterval, patchwork)
 path = here("Data Analysis", "Analysis tests", "NOR", "fit")
 source(here("Data Analysis", "Utility.R"))
 
@@ -71,17 +71,48 @@ path_PL = here(path, "fit_NOR_NOP.rds")
 
 fit_1 = two_way_bayes(mod, data, "NOP", path_PL, 7)
 
-######################
-## central T freq   ##
-######################
-ANOVA = two_way_aov(data, "treatment", "env", "Centre...time..s.")
+############
+## plots#### 
+############
 
-con_2 = emmeans(ANOVA[[3]], pairwise ~ treatment*env, adjust = "tukey")
+EXP = ggplot(data, aes(x = treatment, y = total_exploration, fill = env)) +
+  stat_summary(fun = "mean",
+               geom = "bar",
+               colour = "black",        
+               linewidth = 1,          
+               width = 0.6,
+               position = position_dodge(width = 0.6)) +
+  geom_jitter(aes(color = env), size =2.5, alpha = 0.5, show.legend = F, stroke =1.2, shape =21, color = "black",
+              position = position_jitterdodge(jitter.width =0.15, dodge.width =0.6))+
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar",
+               linewidth = 0.8,
+               width = 0.3,
+               position = position_dodge(width = 0.6)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
+  scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
+  scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
+  labs(x="Treatment", y = "Exploration time (s)")+
+  theme_classic(base_size = 20)+theme(legend.position = "none")
 
-#######################################
-## Two‑way ANOVA  Central Bayesian ####
-#######################################
-mod = cmdstan_model(here("Data Analysis", "Analysis tests", "OF", "ANOVA_OF.stan"))
-path_PL = here(path, "fit_OF_CT.rds")
+NOP = ggplot(data, aes(x = treatment, y = NOP, fill = env)) +
+  stat_summary(fun = "mean",
+               geom = "bar",
+               colour = "black",        
+               linewidth = 1,          
+               width = 0.6,
+               position = position_dodge(width = 0.6)) +
+  geom_jitter(aes(color = env), size =2.5, alpha = 0.5, show.legend = F, stroke =1.2, shape =21, color = "black",
+              position = position_jitterdodge(jitter.width =0.15, dodge.width =0.6))+
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar",
+               linewidth = 0.8,
+               width = 0.3,
+               position = position_dodge(width = 0.6)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
+  scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
+  scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
+  labs(x="Treatment", y = "Novel obj. preference (%)")+
+  theme_classic(base_size = 20)+theme(legend.position = "none")
 
-fit_2 = two_way_bayes(mod, data, "Centre...time..s.", path_PL, 7)
+EXP|NOP

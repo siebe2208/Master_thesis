@@ -7,7 +7,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(cmdstanr, tidyverse, here, ggplot2, future, future.apply, bayesplot)
+pacman::p_load(cmdstanr, tidyverse, here, ggplot2, future, future.apply, bayesplot, patchwork)
 ```
 
 
@@ -80,7 +80,7 @@ summary
 
 ## Generate multiple data sets
 ```{r}
-sim = 100
+sim = 200
 
 sim_list = list()
 
@@ -118,7 +118,7 @@ for(i in 1:sim){
     treatment = treatment,env       = env)
     
  
-    true_values = c(NA,pop_mean,pop_sigma,beta_int,beta_env,beta_t,sigma_res,rand_intercepts = rand_intercepts, rep(NA, times = 11))
+    true_values = c(NA,pop_mean,pop_sigma,beta_int,beta_env,beta_t,sigma_res,rep(NA, times = 34), rand_intercepts, rep(NA, times = 11))
   
 
   
@@ -158,40 +158,56 @@ fits = future_lapply(seq_len(sim), function(i) {
 ```{r}
 result <- bind_rows(fits, .id = "sim_id")
 
-result %>% 
-  filter(variable == "mu") %>% 
+mu_alpha = result %>% 
+  filter(variable == "mu_alpha") %>% 
   ggplot() +
-  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95))+
-  geom_abline(intercept = 0, slope = 1)+
-  theme_classic()
+  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
+  theme_classic(base_size =20)+labs(title = expression(mu))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+                                                                  axis.line = element_line(linewidth = 1.5))
 
-result %>% 
+
+beta_int = result %>% 
   filter(variable == "beta_int") %>% 
   ggplot() +
-  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95))+
-  geom_abline(intercept = 0, slope = 1)+
-  theme_classic()
+  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
+  theme_classic(base_size =20)+labs(title = expression(beta[int]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+                                                                  axis.line = element_line(linewidth = 1.5))  
 
-result %>% 
+beta_env = result %>% 
   filter(variable == "beta_env") %>% 
   ggplot() +
-  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95))+
-  geom_abline(intercept = 0, slope = 1)+
-  theme_classic()
+  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
+  theme_classic(base_size =20)+labs(title = expression(beta[env]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+                                                                  axis.line = element_line(linewidth = 1.5))  
 
-result %>% 
+beta_t = result %>% 
   filter(variable == "beta_t") %>% 
   ggplot() +
-  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95))+
-  geom_abline(intercept = 0, slope = 1)+
-  theme_classic()
-
-result %>% 
+  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
+  theme_classic(base_size =20)+labs(title = expression(beta[t]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+                                                                  axis.line = element_line(linewidth = 1.5))  
+sigma_res = result %>% 
   filter(variable == "sigma") %>% 
   ggplot() +
-  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95))+
-  geom_abline(intercept = 0, slope = 1)+
-  theme_classic()
+  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
+  theme_classic(base_size =20)+labs(title = expression(sigma[res]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+                                                                  axis.line = element_line(linewidth = 1.5)) 
+
+sigma_alpha = result %>% 
+  filter(variable == "sigma_alpha") %>% 
+  ggplot() +
+  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
+  theme_classic(base_size =20)+labs(title = expression(sigma[group]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+                                                                  axis.line = element_line(linewidth = 1.5)) 
+
+(beta_int|beta_env|beta_t)/
+  (mu_alpha|sigma_res|sigma_alpha)
 ```
 
 

@@ -79,3 +79,21 @@ mod = cmdstan_model(here("Data Analysis", "Analysis tests", "SPSN", "ANOVA_SPSN.
 path_SPSN = here(path, "fit_SPSN_SOC.rds")
 
 fit = two_way_bayes(mod, data_soc, "S1...time..s.", path_SPSN, 7)
+
+######################
+##   time novel    ###
+######################
+data_mem = data %>% filter(Stage == 3)
+
+ANOVA = two_way_aov(data_soc, "env", "treatment", "E.S2...time..s.")
+
+emm = emmeans(ANOVA[[3]], ~ treatment | env)
+contrast(emm, method = "pairwise", adjust = "tukey")
+
+######################
+##   Bayesian     ###
+######################
+mod = cmdstan_model(here("Data Analysis", "Analysis tests", "SPSN", "ANOVA_SPSN.stan"))
+path_SPSN = here(path, "fit_SPSN_MEM.rds")
+
+fit = two_way_bayes(mod, data_soc, "E.S2...time..s.", path_SPSN, 7)
