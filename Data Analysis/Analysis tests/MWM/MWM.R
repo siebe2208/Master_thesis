@@ -95,6 +95,22 @@ prior = as.numeric(fit$draws("prior"))
 BF_env = get_bf(prior, as.numeric(fit$draws("beta_env")))
 BF_d_e =  get_bf(prior, as.numeric(fit$draws("beta_d_e")))
 
+mod = cmdstan_model(here("Data Analysis", "Analysis tests", "TF", "ANOVA_TF.stan"))
+path_D10 = path_PL = here(path, "fit_MWM_D10.rds")
+
+data_D10 = data_D10 %>% ungroup() %>% arrange(Swim) %>% mutate(Animal = rep(1:33, each = 4))
+
+z = as.numeric(scale(data_D10$Distance))
+stan_data = list(N =132, J = 33, animal = data_D10$Animal, 
+                 treatment = as.numeric(data_D10$treatment)-1, environment=as.numeric(data_D10$env)-1, y = z)
+
+if (file.exists(path_D10)) {fit = readRDS(path_D10)} else {
+  fit = mod$sample(data = stan_data,iter_warmup = 1000,iter_sampling = 2000,chains = 4,parallel_chains = 4,
+                   output_dir = dirname(path_D10))
+  saveRDS(fit, path_D10)}
+
+fit$summary()
+
 ######################
 ## distance to target#
 ######################
@@ -102,3 +118,16 @@ mod = lmer(Dis_TQ ~Day * env * treatment +(1|Animal), data = data)
 
 summary(mod)
 r2beta(mod, method = "nsj")
+
+z = as.numeric(scale(data_bayes$Dis_TQ))
+stan_data = list(N =1320, J = 33, Day  = data_bayes$Day, animal = data_bayes$Animal, 
+                 treatment = data_bayes$treatment, environment=data_bayes$env, y = z)
+
+mod = cmdstan_model(here("Data Analysis", "Analysis tests", "MWM", "ANOVA_MWM.stan"))
+fit = mod$sample(data = stan_data,iter_warmup = 1000,iter_sampling = 2000,chains = 4,parallel_chains = 4)
+
+draws = fit$draws(c('beta_day', 'beta_env', 'beta_t', 'beta_d_e', 'beta_d_t', 'beta_e_t', 'beta_int')) %>% as_draws_df() %>% 
+  select(-.chain, -.iteration, -.draw)
+
+
+BFs = draws %>% summarise(across(everything(), ~ get_bf(prior, .x)))
