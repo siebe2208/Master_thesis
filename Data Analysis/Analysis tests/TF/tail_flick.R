@@ -28,7 +28,7 @@ data_M = data.frame(animal = mice_ID, treatment = treatment, env = environment, 
                   mutate(treatment = factor(treatment, levels = c("Sal", "CVAD"), labels = c("SAL", "CVAD")), env = factor(env, levels=c("PE", "EE")))
 
 data = data_M %>% rowwise() %>% 
-  mutate(treatment = factor(ifelse(treatment == "Sal", 0, 1))) %>% 
+  mutate(treatment = factor(ifelse(treatment == "SAL", 0, 1))) %>% 
   mutate(env = factor(ifelse(env == "PE", 0,1))) %>% pivot_longer(cols = c(T1,T2, T3), names_to = "trial", values_to = "latency") %>% 
   mutate(trial = as.numeric(str_remove(trial, "T")), treatment = factor(treatment),env = factor(env))
 

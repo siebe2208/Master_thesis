@@ -38,6 +38,7 @@ model {
   beta_int ~ normal(0,1);
   beta_env ~ normal(0,1);
   beta_t ~ normal(0,1);
+  beta_day ~ normal(0,1);
   
   beta_e_t ~ normal(0,1);
   beta_d_e ~ normal(0,1);
