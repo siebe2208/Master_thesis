@@ -97,3 +97,81 @@ mod = cmdstan_model(here("Data Analysis", "Analysis tests", "SPSN", "ANOVA_SPSN.
 path_SPSN = here(path, "fit_SPSN_MEM.rds")
 
 fit = two_way_bayes(mod, data_soc, "E.S2...time..s.", path_SPSN, 7)
+
+######################
+##   Plots         ###
+######################
+sum = data %>% group_by(treatment, env, Stage) %>% summarise(Distance = mean(Distance..m.), SEM = sd(Distance..m.)/sqrt(n())) %>% 
+  mutate(Stage = ifelse(Stage == 1, "Habituation", ifelse(Stage == 2, "S1", "S2"))) %>% mutate(SEM_l = Distance - SEM, SEM_h = Distance + SEM)
+
+Stage = ggplot(sum)+geom_line(aes(x=Stage, y=Distance, color = env, linetype = treatment, group = interaction(env, treatment)), linewidth = 1.5)+
+  xlab("")+ylab("Total path length (m)")+theme_classic(base_size =20)+scale_color_manual(values = c("0" = "salmon2", "1"= "cadetblue3"),labels = c('0' = "PE", "1" = "EE"), name = "Environment")+
+  geom_point(aes(x=Stage,y=Distance, color = env), size = 4)+ geom_errorbar(aes(x=Stage, ymin = SEM_l,ymax=SEM_h, color = env), width =0.12, linewidth =0.8, alpha = 0.6)+
+  scale_linetype_manual(values = c("0" = "dashed", "1"= "solid"),labels=c("0" = "SAL", "1" = "CVAD"), name = "Treatment")+
+  guides(linetype = guide_legend(override.aes = list(linetype = c("dotted", "solid"))))+
+  theme(legend.text = element_text(size = 12),legend.title = element_text(size = 13),legend.key.size = unit(1, "lines"), legend.key.width = unit(1, "cm"))   
+
+
+
+SPSN_PL = ggplot(data_loco, aes(x = treatment, y = Distance..m., fill = env)) +
+  stat_summary(fun = "mean",
+               geom = "bar",
+               colour = "black",        
+               linewidth = 1,          
+               width = 0.6,
+               position = position_dodge(width = 0.6)) +
+  geom_jitter(aes(color = env), size =2.5, alpha = 0.5, show.legend = F, stroke =1.2, shape =21, color = "black",
+              position = position_jitterdodge(jitter.width =0.15, dodge.width =0.6))+
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar",
+               linewidth = 0.8,
+               width = 0.3,
+               position = position_dodge(width = 0.6)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
+  scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
+  scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
+  labs(x="Treatment", y = "Total path length (m)")+
+  theme_classic(base_size = 20)+theme(legend.position = "none")
+
+SPSN1 = ggplot(data_soc, aes(x = treatment, y = S1...time..s., fill = env)) +
+  stat_summary(fun = "mean",
+               geom = "bar",
+               colour = "black",        
+               linewidth = 1,          
+               width = 0.6,
+               position = position_dodge(width = 0.6)) +
+  geom_jitter(aes(color = env), size =2.5, alpha = 0.5, show.legend = F, stroke =1.2, shape =21, color = "black",
+              position = position_jitterdodge(jitter.width =0.15, dodge.width =0.6))+
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar",
+               linewidth = 0.8,
+               width = 0.3,
+               position = position_dodge(width = 0.6)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
+  scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
+  scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
+  labs(x="Treatment", y = "Time Stranger 1 (s)")+
+  theme_classic(base_size = 20)+theme(legend.position = "none")
+
+
+SPSN2 = ggplot(data_mem, aes(x = treatment, y = E.S2...time..s., fill = env)) +
+  stat_summary(fun = "mean",
+               geom = "bar",
+               colour = "black",        
+               linewidth = 1,          
+               width = 0.6,
+               position = position_dodge(width = 0.6)) +
+  geom_jitter(aes(color = env), size =2.5, alpha = 0.5, show.legend = F, stroke =1.2, shape =21, color = "black",
+              position = position_jitterdodge(jitter.width =0.15, dodge.width =0.6))+
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar",
+               linewidth = 0.8,
+               width = 0.3,
+               position = position_dodge(width = 0.6)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
+  scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
+  scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
+  labs(x="Treatment", y = "Time Stranger 2 (s)")+
+  theme_classic(base_size = 20)
+Stage|SPSN_PL
+SPSN1|SPSN2

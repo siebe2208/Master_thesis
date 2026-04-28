@@ -22,27 +22,17 @@ source(here("Data Analysis", "Utility.R"))
 ########################################
 ## Load in data and mutate conditions ##
 ########################################
-data_w1 = read_excel(here("Data", "Statistics-Sabina MWM week 1.xlsx"))
-data_w2 = read_excel(here("Data", "Statistics-Sabina MWM week 2.xlsx"))
-data_w1 = data_w1[-c(1:3),]
-data_w2 = data_w2[-c(1:3),]
+data = read_excel(here("Data", "Statistics-Sabina MWM week 3.xlsx"))
 
-names(data_w1)[2] = "Animal"
-names(data_w1)[3] = "Treatment"
-names(data_w1)[6] = "Distance"
-names(data_w1)[9] = "swim time"
-names(data_w1)[17] = "Dis_TQ"
-
-names(data_w2)[2] = "Animal"
-names(data_w2)[3] = "Treatment"
-names(data_w2)[6] = "Distance"
-names(data_w2)[9] = "swim time"
-names(data_w2)[17] = "Dis_TQ"
+names(data)[2] = "Animal"
+names(data)[3] = "Treatment"
+names(data)[6] = "Distance"
+names(data)[22] = "Dis_TQ"
 
 
 meta_data = read.csv(here("Data", "data.csv"))
 
-data = bind_rows(data_w1, data_w2) %>% filter(Animal %in% meta_data$mice_ID | Animal == "M-15.2_R") %>% rowwise() %>% 
+data = data %>% filter(Animal %in% meta_data$mice_ID | Animal == "M-15.2_R") %>% rowwise() %>% 
   mutate(treatment = factor(ifelse(str_detect(Treatment, "SAL"), 0, 1))) %>% 
   mutate(env = factor(ifelse(str_detect(Treatment, "PE"), 0,1))) %>% mutate(Distance = as.numeric(Distance)) %>% 
   mutate(Day = as.numeric(as.character(Day))) %>% mutate(Dis_TQ = as.numeric(Dis_TQ))
@@ -61,25 +51,22 @@ mod = lmer(Distance ~Day * env * treatment +(1|Animal), data = data)
 summary(mod)
 r2beta(mod, method = "nsj")
 
-data_D10 = data %>% filter(Day == 10)
-mod_2 = lmer(Distance ~ env * treatment +(1|Animal), data = data_D10)
-
+data_D15 = data %>%  ungroup() %>% filter(Day == 15) %>% arrange(Day, Swim)
+mod_2 = lmer(Distance ~ env * treatment +(1|Animal), data = data_D15)
 summary(mod_2)
-r2beta(mod_2, method = "nsj")
 
-sum = data %>% group_by(treatment, env, Day) %>% summarise(Distance = mean(Distance))
-ggplot(sum)+geom_line(aes(x=Day, y=Distance, color = env, linetype = treatment, group = interaction(env, treatment)))+theme_classic()
-  
+r2beta(mod_2, method = "nsj")
 ###########################
 ## Pathlength   Bayesian ##
 ###########################
-data_bayes = data %>% ungroup()%>% arrange(Day, Swim) %>% mutate(Animal = rep(1:33, 10*4)) %>% arrange(Animal) %>% 
-  mutate(treatment = as.numeric(treatment)-1, env = as.numeric(env)-1)
 mod = cmdstan_model(here("Data Analysis", "Analysis tests", "MWM", "ANOVA_MWM.stan"))
-path_PL = here(path, "fit_MWM_PLA.rds")
+path_PL = here(path, "fit_MWM_reversal1.rds")
+
+data_bayes = data %>% ungroup()%>% arrange(Day, Swim) %>% mutate(Animal = as.numeric(factor(Animal))) %>% arrange(Animal) %>% 
+  mutate(treatment = as.numeric(treatment)-1, env = as.numeric(env)-1)
 
 z = as.numeric(scale(data_bayes$Distance))
-stan_data = list(N =1320, J = 33, Day  = data_bayes$Day, animal = data_bayes$Animal, 
+stan_data = list(N =660, J = 33, Day  = data_bayes$Day, animal = data_bayes$Animal, 
                  treatment = data_bayes$treatment, environment=data_bayes$env, y = z)
 
 if (file.exists(path_PL)) {fit = readRDS(path_PL)} else {
@@ -91,22 +78,25 @@ fit$summary()
 
 prior = as.numeric(fit$draws("prior"))
 
-BF_env = get_bf(prior, as.numeric(fit$draws("beta_env")))
-BF_d_e =  get_bf(prior, as.numeric(fit$draws("beta_d_e")))
+draws = fit$draws(c('beta_day', 'beta_env', 'beta_t', 'beta_d_e', 'beta_d_t', 'beta_e_t', 'beta_int')) %>% as_draws_df() %>% 
+  select(-.chain, -.iteration, -.draw)
+BFs = draws %>% summarise(across(everything(), ~ get_bf(prior, .x)))
+
+
+
 
 mod = cmdstan_model(here("Data Analysis", "Analysis tests", "TF", "ANOVA_TF.stan"))
-path_D10 = path_PL = here(path, "fit_MWM_D10.rds")
+path_D15 = path_PL = here(path, "fit_MWM_D15.rds")
+data_D15 = data_D15 %>% ungroup() %>% arrange(Swim) %>% mutate(Animal = rep(1:33, times = 4))
 
-data_D10 = data_D10 %>% ungroup() %>% arrange(Swim) %>% mutate(Animal = rep(1:33, each = 4))
-
-z = as.numeric(scale(data_D10$Distance))
+z = as.numeric(scale(data_D15$Distance))
 stan_data = list(N =132, J = 33, animal = data_D10$Animal, 
                  treatment = as.numeric(data_D10$treatment)-1, environment=as.numeric(data_D10$env)-1, y = z)
 
-if (file.exists(path_D10)) {fit = readRDS(path_D10)} else {
+if (file.exists(path_D15)) {fit = readRDS(path_D15)} else {
   fit = mod$sample(data = stan_data,iter_warmup = 1000,iter_sampling = 2000,chains = 4,parallel_chains = 4,
-                   output_dir = dirname(path_D10))
-  saveRDS(fit, path_D10)}
+                   output_dir = dirname(path_D15))
+  saveRDS(fit, path_D15)}
 
 fit$summary()
 
@@ -122,15 +112,25 @@ mod = lmer(Dis_TQ ~Day * env * treatment +(1|Animal), data = data)
 summary(mod)
 r2beta(mod, method = "nsj")
 
+###########################
+## Distance to target    ##
+###########################
+mod = cmdstan_model(here("Data Analysis", "Analysis tests", "MWM", "ANOVA_MWM.stan"))
+path_MWM = here(path, "fit_MWM_reversal2.rds")
+
 z = as.numeric(scale(data_bayes$Dis_TQ))
-stan_data = list(N =1320, J = 33, Day  = data_bayes$Day, animal = data_bayes$Animal, 
+stan_data = list(N =660, J = 33, Day  = data_bayes$Day, animal = data_bayes$Animal, 
                  treatment = data_bayes$treatment, environment=data_bayes$env, y = z)
 
-mod = cmdstan_model(here("Data Analysis", "Analysis tests", "MWM", "ANOVA_MWM.stan"))
-fit = mod$sample(data = stan_data,iter_warmup = 1000,iter_sampling = 2000,chains = 4,parallel_chains = 4)
+if (file.exists(path_MWM)) {fit = readRDS(path_MWM)} else {
+  fit = mod$sample(data = stan_data,iter_warmup = 1000,iter_sampling = 2000,chains = 4,parallel_chains = 4,
+                   output_dir = dirname(path_MWM))
+  saveRDS(fit, path_MWM)}
+
+fit$summary()
+
+prior = as.numeric(fit$draws("prior"))
 
 draws = fit$draws(c('beta_day', 'beta_env', 'beta_t', 'beta_d_e', 'beta_d_t', 'beta_e_t', 'beta_int')) %>% as_draws_df() %>% 
   select(-.chain, -.iteration, -.draw)
-
-
 BFs = draws %>% summarise(across(everything(), ~ get_bf(prior, .x)))
