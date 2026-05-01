@@ -134,3 +134,36 @@ draws = fit$draws(c('beta_day', 'beta_env', 'beta_t', 'beta_d_e', 'beta_d_t', 'b
 
 
 BFs = draws %>% summarise(across(everything(), ~ get_bf(prior, .x)))
+
+
+######################
+##     Plots        ##
+######################
+sum = data %>% group_by(treatment, env, Day) %>% summarise(Distance = mean(Distance))
+sum_2 = data %>% group_by(treatment, env, Day) %>% summarise(mean = mean(Dis_TQ))
+
+Distance = ggplot(sum)+geom_line(aes(x=Day, y=Distance, color = env, linetype = treatment, group = interaction(env, treatment)), linewidth = 1.1)+
+  scale_x_continuous(breaks = sort(unique(sum$Day)))+scale_y_continuous(limits=c(0,2000))+theme_classic(base_size = 20)+
+  scale_color_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "Environment")+
+  labs(x="Day", y = "Total path length (cm)")+
+  scale_linetype_discrete(name = "Treatment",labels = c("SAL", "CVAD"))+
+  stat_summary(aes(x = Day, y= Distance, color = env, group = interaction(env, treatment)),
+               fun = "mean",
+               geom = "point",
+               size = 3) + theme(legend.position = "none")+
+  annotate("rect", xmin = 9.7, xmax = 10.3,   ymin = 100, ymax = 400, 
+    fill = NA,            color = "black",      linewidth = 1.3) +
+  annotate("text",x = 10, y = 450, label = "p > 0.05",size = 5,fontface = "bold")
+
+DDT = ggplot(sum_2)+geom_line(aes(x=Day, y=mean, color = env, linetype = treatment, group = interaction(env, treatment)), linewidth = 1.1)+
+  scale_x_continuous(breaks = sort(unique(sum$Day)))+theme_classic(base_size = 20)+
+  scale_color_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "Environment")+
+  labs(x="Day", y = "Distance to target (cm)")+
+  scale_linetype_discrete(name = "Treatment",labels = c("SAL", "CVAD"))+
+  stat_summary(aes(x = Day, y= mean, color = env, group = interaction(env, treatment)),
+               fun = "mean",
+               geom = "point",
+               size = 3) 
+
+Distance|DDT
+

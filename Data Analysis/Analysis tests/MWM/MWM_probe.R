@@ -85,3 +85,51 @@ mod = cmdstan_model(here("Data Analysis", "Analysis tests", "MWM", "ANOVA_MWM_2w
 path_P3 = here(path, "fit_MWM_P3.rds")
 
 fit = two_way_bayes(mod, data_P3, "ACQ_dur", path_P3, 7)
+
+############
+## plots####
+############
+P1= ggplot(data_P1, aes(x = treatment, y = ACQ_dur, fill = env)) +
+  stat_summary(fun = "mean",
+               geom = "bar",
+               colour = "black",        
+               linewidth = 1,          
+               width = 0.6,
+               position = position_dodge(width = 0.6)) +
+  geom_jitter(aes(color = env), size =2.5, alpha = 0.5, show.legend = F, stroke =1.2, shape =21, color = "black",
+              position = position_jitterdodge(jitter.width =0.15, dodge.width =0.6))+
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar",
+               linewidth = 0.8,
+               width = 0.3,
+               position = position_dodge(width = 0.6)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
+  scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
+  scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
+  labs(x="Treatment", y = "Duration in TQ (s)")+
+  theme_classic(base_size = 20)+theme(legend.position = "none")
+
+
+
+P2 = ggplot(data_P2, aes(x = treatment, y = ACQ_dur, fill = env)) +
+  stat_summary(fun = "mean",
+               geom = "bar",
+               colour = "black",        
+               linewidth = 1,          
+               width = 0.6,
+               position = position_dodge(width = 0.6)) +
+  geom_jitter(aes(color = env), size =2.5, alpha = 0.5, show.legend = F, stroke =1.2, shape =21, color = "black",
+              position = position_jitterdodge(jitter.width =0.15, dodge.width =0.6))+
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar",
+               linewidth = 0.8,
+               width = 0.3,
+               position = position_dodge(width = 0.6)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
+  scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
+  scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
+  labs(x="Treatment", y = "Duration in TQ (s)")+
+  theme_classic(base_size = 20)
+
+P1|P2
+
