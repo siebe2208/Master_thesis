@@ -29,7 +29,7 @@ data_P2 = data %>% filter(Probe == 2) %>% filter(Animal %in% meta_data$mice_ID |
 
 data_P3 = data %>% filter(Probe == 3) %>% filter(Animal %in% meta_data$mice_ID | Animal == "M-15.2_R") %>% rowwise() %>% rowwise() %>% 
   mutate(treatment = factor(ifelse(str_detect(Treatment, "SAL"), 0, 1))) %>% 
-  mutate(env = factor(ifelse(str_detect(Treatment, "PE"), 0,1))) %>% mutate(ACQ_dur = as.numeric(ACQ_dur)) 
+  mutate(env = factor(ifelse(str_detect(Treatment, "PE"), 0,1))) %>% mutate(REV_dur = as.numeric(REV_dur)) 
 
 sum(as.numeric(data_P1$treatment)-1) # Check how many animals CVAD (should be 12)
 sum(as.numeric(data_P1$env)-1)  # Check how many animals CVAD (should be 18)
@@ -133,3 +133,24 @@ P2 = ggplot(data_P2, aes(x = treatment, y = ACQ_dur, fill = env)) +
 
 P1|P2
 
+
+
+P3 = ggplot(data_P3, aes(x = treatment, y = REV_dur, fill = env)) +
+  stat_summary(fun = "mean",
+               geom = "bar",
+               colour = "black",        
+               linewidth = 1,          
+               width = 0.6,
+               position = position_dodge(width = 0.6)) +
+  geom_jitter(aes(color = env), size =2.5, alpha = 0.5, show.legend = F, stroke =1.2, shape =21, color = "black",
+              position = position_jitterdodge(jitter.width =0.15, dodge.width =0.6))+
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar",
+               linewidth = 0.8,
+               width = 0.3,
+               position = position_dodge(width = 0.6)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
+  scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
+  scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
+  labs(x="Treatment", y = "Duration in RQ (s)")+
+  theme_classic(base_size = 20)
