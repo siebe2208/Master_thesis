@@ -1,11 +1,16 @@
-pacman::p_load(tidyverse, here, gt)
-
+pacman::p_load(tidyverse, here, gt,zoo,ggplot2,lme4,lmerTest,r2glmm, logspline, cmdstanr, posterior)
+source(here("Data Analysis", "weight_curve_script.R"))
+source(here("Data Analysis", "unclean_data.R"))
+source(here("Data Analysis", "Utility.R"))
 #################################################################
 ####### Import data #############################################
 #################################################################
 
 data_nodig = read.csv(here("Data", "Data.csv"))
 
+data_BW = bind_cols(data_F11.2, data_F11.3, data_F12, data_F13.2,data_F14,data_M13,data_M14,data_M15.2,data_M16) %>% 
+  mutate(DAS = days_after...1) %>%select(-matches("days_after")) %>% mutate(across(-DAS, ~ na.spline(.x, x = DAS, na.rm = FALSE))) %>% 
+  pivot_longer(cols = -DAS, names_to="animal",values_to = "weight") %>% mutate(treatment = rep(forcats::fct_rev(treatment),26), env = rep(factor(environment),26)) 
 
 #################################################################
 ####### Meta-Analysis ###########################################
@@ -69,4 +74,61 @@ table_sample = table_FM %>% gt() %>% tab_spanner(label = "Male", columns = c(PE_
                                    in subsequent analyses to maximize statistical power."))
 
 gtsave(table_sample, "table_sample.png", zoom = 3) # increase DPI 
+
+#################################################################
+####### Analysis weights        #################################
+#################################################################
+mod = lmer(weight ~DAS * env * treatment +(1|animal), data = data_BW)
+summary(mod)
+
+r2beta(mod, method = "nsj")
+
+
+data_bayes = data_BW %>% ungroup() %>% mutate(animal = rep(1:35, 26)) %>% arrange(animal) %>% 
+  mutate(treatment = as.numeric(treatment)-1, env = as.numeric(env)-1)
+mod = cmdstan_model(here("Data Analysis", "Analysis tests", "MWM", "ANOVA_MWM.stan"))
+
+
+z = as.numeric(scale(data_bayes$weight))
+stan_data = list(N =nrow(data_bayes), J = 35, Day  = data_bayes$DAS, animal = data_bayes$animal, 
+                 treatment = data_bayes$treatment, environment=data_bayes$env, y = z)
+
+fit = mod$sample(data = stan_data,iter_warmup = 1000,iter_sampling = 2000,chains = 4,parallel_chains = 4)
+
+fit$summary()
+
+
+
+prior = as.numeric(fit$draws("prior"))
+
+draws = fit$draws(c('beta_day', 'beta_env', 'beta_t', 'beta_d_e', 'beta_d_t', 'beta_e_t', 'beta_int')) %>% as_draws_df() %>% 
+  select(-.chain, -.iteration, -.draw)
+
+
+BFs = draws %>% summarise(across(everything(), ~ get_bf(prior, .x)))
+
+
+#################################################################
+####### plots         ###########################################
+#################################################################
+ggplot(data_BW) + stat_summary(aes(x=DAS,y=weight,color = env, linetype = treatment,group=interaction(treatment, env)),
+                                 fun = mean, geom = "line", linewidth =1.2)+
+  stat_summary(aes(x = DAS, y= weight, color = env, group = interaction(env, treatment)),
+               fun = "mean",
+               geom = "point",
+               size = 3)+ labs(x="Days after separation", y = "Weight (g)")+theme_classic(base_size = 20)+
+  scale_x_continuous(breaks = c(1,7,14,21,26))+
+  scale_color_manual(values = c("PE" = "salmon2", "EE" = "cadetblue3"), name = "Environment")+
+  scale_linetype_discrete(name = "Treatment",labels = c("SAL", "CVAD"))
+
+sum = data_BW %>% group_by(treatment, env,DAS) %>% summarise(mean = mean(weight))
+
+scale_x_continuous(breaks = sort(unique(sum$Day)))+theme_classic(base_size = 20)+
+  scale_color_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "Environment")+
+  labs(x="Day", y = "Distance to target (cm)")+
+  scale_linetype_discrete(name = "Treatment",labels = c("SAL", "CVAD"))+
+  stat_summary(aes(x = Day, y= mean, color = env, group = interaction(env, treatment)),
+               fun = "mean",
+               geom = "point",
+               size = 3) 
 
