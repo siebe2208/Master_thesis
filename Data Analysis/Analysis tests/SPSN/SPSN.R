@@ -85,7 +85,7 @@ fit = two_way_bayes(mod, data_soc, "S1...time..s.", path_SPSN, 7)
 ######################
 data_mem = data %>% filter(Stage == 3)
 
-ANOVA = two_way_aov(data_soc, "env", "treatment", "E.S2...time..s.")
+ANOVA = two_way_aov(data_mem, "env", "treatment", "E.S2...time..s.")
 
 emm = emmeans(ANOVA[[3]], ~ treatment | env)
 contrast(emm, method = "pairwise", adjust = "tukey")
@@ -96,7 +96,7 @@ contrast(emm, method = "pairwise", adjust = "tukey")
 mod = cmdstan_model(here("Data Analysis", "Analysis tests", "SPSN", "ANOVA_SPSN.stan"))
 path_SPSN = here(path, "fit_SPSN_MEM.rds")
 
-fit = two_way_bayes(mod, data_soc, "E.S2...time..s.", path_SPSN, 7)
+fit = two_way_bayes(mod, data_mem, "E.S2...time..s.", path_SPSN, 7)
 
 ######################
 ##   Plots         ###
