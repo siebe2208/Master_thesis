@@ -98,6 +98,19 @@ path_SPSN = here(path, "fit_SPSN_MEM.rds")
 
 fit = two_way_bayes(mod, data_mem, "E.S2...time..s.", path_SPSN, 7)
 
+############################
+##   additional analysis ###
+############################
+
+data_mem = data %>% filter(Stage == 3) %>% mutate(SNP = E.S2...time..s./(S1...time..s.+E.S2...time..s.))
+
+ANOVA = two_way_aov(data_mem, "env", "treatment", "SNP")
+
+emm = emmeans(ANOVA[[3]], ~ treatment | env)
+contrast(emm, method = "pairwise", adjust = "tukey")
+
+
+
 ######################
 ##   Plots         ###
 ######################
@@ -131,7 +144,7 @@ SPSN_PL = ggplot(data_loco, aes(x = treatment, y = Distance..m., fill = env)) +
   scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
   scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
   labs(x="Treatment", y = "Total path length (m)")+
-  theme_classic(base_size = 20)+theme(legend.position = "none")
+  theme_classic(base_size = 20)
 
 SPSN1 = ggplot(data_soc, aes(x = treatment, y = S1...time..s., fill = env)) +
   stat_summary(fun = "mean",
@@ -151,7 +164,7 @@ SPSN1 = ggplot(data_soc, aes(x = treatment, y = S1...time..s., fill = env)) +
   scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
   scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
   labs(x="Treatment", y = "Time Stranger 1 (s)")+
-  theme_classic(base_size = 20)+theme(legend.position = "none")
+  theme_classic(base_size = 20)
 
 
 SPSN2 = ggplot(data_mem, aes(x = treatment, y = E.S2...time..s., fill = env)) +

@@ -112,7 +112,7 @@ NOP = ggplot(data, aes(x = treatment, y = NOP, fill = env)) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
   scale_x_discrete(labels = c("0" = "SAL", "1"= "CVAD"))+
   scale_fill_manual(values = c("0" = "salmon2", "1" = "cadetblue3"),labels = c("0" = "PE", "1" = "EE"), name = "")+
-  labs(x="Treatment", y = "Novel obj. preference (%)")+
-  theme_classic(base_size = 20)+theme(legend.position = "none")
+  labs(x="Treatment", y = "NAP (%)")+
+  theme_classic(base_size = 20)+theme()
 
 EXP|NOP

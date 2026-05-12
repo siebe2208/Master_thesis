@@ -14,42 +14,33 @@ pacman::p_load(cmdstanr, tidyverse, here, ggplot2, future, future.apply, bayespl
 ## simulate 1 dataset 
 ```{r}
 J = 34
-n = 3
 
-N = n*J
 
-pop_mean = rnorm(1, 0, 1)
-pop_sigma = rexp(1, rate = 1)
-
-sigma_res = rexp(1, rate = 1)
-
-rand_intercepts = rnorm(J, pop_mean, pop_sigma)
-
-animal = rep(1:J, each = n)               
+mean = rnorm(1, 0, 1)
+sigma = rexp(1, rate = 1)
 
 beta_int = rnorm(1,0,1)
 beta_env = rnorm(1,0,1)
 beta_t = rnorm(1,0,1)
 
+ME_t = beta_t+(beta_int/2)
+ME_env = beta_env +(beta_int/2)
+
 treatment = sample(c(0, 1), J, replace = TRUE)
 env       = sample(c(0, 1), J, replace = TRUE)
 
-treatment = treatment[animal]      
-env       = env[animal] 
 
-mu =rand_intercepts[animal] + beta_env*env + beta_t*treatment + beta_int*(treatment*env)
-y = rnorm(N, mu, sigma_res)
+mu = mean+ beta_env*env + beta_t*treatment + beta_int*(treatment*env)
+y = rnorm(J, mu, sigma)
 
 
 dat = data.frame(
-  animal    = animal,
-  trial     = rep(1:n, times = J),
   y         = y,
   treatment = treatment,
   env       = env
 )
 
-true_values = c(NA,pop_mean,pop_sigma,beta_int,beta_env,beta_t,sigma_res,rep(NA, times = 34), rand_intercepts = rand_intercepts, rep(NA, times = 11))
+true_values = c(NA,mean,beta_int,beta_env,beta_t,sigma,ME_t, ME_env, rep(NA,9))
 
 
 ```
@@ -57,9 +48,9 @@ true_values = c(NA,pop_mean,pop_sigma,beta_int,beta_env,beta_t,sigma_res,rep(NA,
 
 ## Fit 1 dataset
 ```{r pressure, echo=FALSE}
-data_stan = list(N = N, y = y, treatment = treatment, environment=env, J =J, animal = animal)
+data_stan = list(N = J, y = y, treatment = treatment, environment=env)
 
-model = cmdstan_model(here("Data Analysis", "Analysis tests", "TF", "ANOVA_TF.stan"))
+model = cmdstan_model(here("Data Analysis", "Analysis tests", "OF", "ANOVA_OF.stan"))
 
 fit = model$sample(data = data_stan, iter_warmup =500, iter_sampling = 500, chains = 4, parallel_chains = 4, adapt_delta = 0.95, max_treedepth = 12)
 ```
@@ -87,42 +78,38 @@ sim_list = list()
 for(i in 1:sim){
   
     J = 34
-    n = 3
-    
-    N = n*J
-    
-    pop_mean = rnorm(1, 0, 1)
-    pop_sigma = rexp(1, rate = 1)
-    
-    sigma_res = rexp(1, rate = 1)
-    
-    rand_intercepts = rnorm(J, pop_mean, pop_sigma)
-    
-    animal = rep(1:J, each = n)               
+
+
+    mean = rnorm(1, 0, 1)
+    sigma = rexp(1, rate = 1)
     
     beta_int = rnorm(1,0,1)
     beta_env = rnorm(1,0,1)
     beta_t = rnorm(1,0,1)
     
+    ME_t = beta_t+(beta_int/2)
+    ME_env = beta_env +(beta_int/2)
+    
     treatment = sample(c(0, 1), J, replace = TRUE)
     env       = sample(c(0, 1), J, replace = TRUE)
     
-    treatment = treatment[animal]      
-    env       = env[animal] 
     
-    mu =rand_intercepts[animal] + beta_env*env + beta_t*treatment + beta_int*(treatment*env)
-    y = rnorm(N, mu, sigma_res)
+    mu = mean+ beta_env*env + beta_t*treatment + beta_int*(treatment*env)
+    y = rnorm(J, mu, sigma)
     
     
-    sim_data  = data.frame(animal    = animal,trial     = rep(1:n, times = J),y         = y,
-    treatment = treatment,env       = env)
+    dat = data.frame(
+      y         = y,
+      treatment = treatment,
+      env       = env
+    )
     
- 
-    true_values = c(NA,pop_mean,pop_sigma,beta_int,beta_env,beta_t,sigma_res,rep(NA, times = 34), rand_intercepts, rep(NA, times = 11))
+    true_values = c(NA,mean,beta_int,beta_env,beta_t,sigma,ME_t, ME_env, rep(NA,9))
+
   
 
   
-    sim_list[[i]] = list(sim_data = sim_data, sim_vals = true_values)
+    sim_list[[i]] = list(sim_data = dat, sim_vals = true_values)
   
 }
 
@@ -131,17 +118,13 @@ for(i in 1:sim){
 
 ## Fit model sim times
 ```{r, echo = FALSE, message=FALSE}
-n_cores = availableCores()
-use_cores = max(1, n_cores - 4)
 
-plan(multisession, workers = use_cores)
-
-model = cmdstan_model(here("Data Analysis", "Analysis tests", "TF", "ANOVA_TF.stan"))
+model = cmdstan_model(here("Data Analysis", "Analysis tests", "OF", "ANOVA_OF.stan"))
 
 fits = future_lapply(seq_len(sim), function(i) {
   df = sim_list[[i]][[1]]
   
-  data_stan <- list(N = 102,y = df$y,treatment = df$treatment,environment = df$env, animal = df$animal,J=34)
+  data_stan <- list(N = 34,y = df$y,treatment = df$treatment,environment = df$env)
   
   fit <- model$sample(data = data_stan,iter_warmup = 1000,iter_sampling = 2000,chains = 4,parallel_chains = 4,refresh = 0, adapt_delta = 0.95)
   
@@ -158,21 +141,27 @@ fits = future_lapply(seq_len(sim), function(i) {
 ```{r}
 result <- bind_rows(fits, .id = "sim_id")
 
-mu_alpha = result %>% 
-  filter(variable == "mu_alpha") %>% 
+ME_t = result %>% 
+  filter(variable == "ME_t") %>% 
   ggplot() +
   geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
   geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
-  theme_classic(base_size =20)+labs(title = expression(mu))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+  theme_classic(base_size =20)+labs(title = expression(ME[t]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
                                                                   axis.line = element_line(linewidth = 1.5))
-
+ME_env = result %>% 
+  filter(variable == "ME_env") %>% 
+  ggplot() +
+  geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
+  theme_classic(base_size =20)+labs(title = expression(ME[env]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+                                                                  axis.line = element_line(linewidth = 1.5))
 
 beta_int = result %>% 
   filter(variable == "beta_int") %>% 
   ggplot() +
   geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
   geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
-  theme_classic(base_size =20)+labs(title = expression(beta[int]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+  theme_classic(base_size =20)+labs(title = expression(gamma))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
                                                                   axis.line = element_line(linewidth = 1.5))  
 
 beta_env = result %>% 
@@ -180,7 +169,7 @@ beta_env = result %>%
   ggplot() +
   geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
   geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
-  theme_classic(base_size =20)+labs(title = expression(beta[env]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+  theme_classic(base_size =20)+labs(title = expression(beta))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
                                                                   axis.line = element_line(linewidth = 1.5))  
 
 beta_t = result %>% 
@@ -188,7 +177,7 @@ beta_t = result %>%
   ggplot() +
   geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
   geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
-  theme_classic(base_size =20)+labs(title = expression(beta[t]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+  theme_classic(base_size =20)+labs(title = expression(alpha))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
                                                                   axis.line = element_line(linewidth = 1.5))  
 sigma_res = result %>% 
   filter(variable == "sigma") %>% 
@@ -198,16 +187,16 @@ sigma_res = result %>%
   theme_classic(base_size =20)+labs(title = expression(sigma[res]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
                                                                   axis.line = element_line(linewidth = 1.5)) 
 
-sigma_alpha = result %>% 
-  filter(variable == "sigma_alpha") %>% 
+mu = result %>% 
+  filter(variable == "mu") %>% 
   ggplot() +
   geom_pointrange(aes(x = sim, y = mean, ymin = q5, ymax = q95), color = "black")+
   geom_abline(intercept = 0, slope = 1, linewidth = 1.5, color = "red", linetype = "dashed")+
   theme_classic(base_size =20)+labs(title = expression(sigma[group]))+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
                                                                   axis.line = element_line(linewidth = 1.5)) 
 
-(beta_int|beta_env|beta_t)/
-  (mu_alpha|sigma_res|sigma_alpha)
+(beta_int|ME_t|ME_env)/
+  (beta_t|beta_env|sigma_res)
 ```
 
 

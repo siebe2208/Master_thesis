@@ -80,12 +80,13 @@ BFs = draws %>% summarise(across(everything(), ~ get_bf(prior, .x)))
 ##   Plots         ###
 ######################
 sum = data %>% group_by(treatment, env, trial) %>% summarise(Distance = mean(latency), SEM = sd(latency)/sqrt(n())) %>% 
-  mutate(trial = ifelse(trial == 0, "Shock", "No-Shock")) %>% mutate(SEM_l = Distance - SEM, SEM_h = Distance + SEM)
+  mutate(trial = ifelse(trial == 0, "Shock", "No-Shock")) %>% mutate(SEM_l = Distance - SEM, SEM_h = Distance + SEM) %>% mutate(trial = factor(trial, levels = c("Shock", "No-Shock")))
 
 Stage = ggplot(sum)+geom_line(aes(x=trial, y=Distance, color = env, linetype = treatment, group = interaction(env, treatment)), linewidth = 1.5)+
   xlab("")+ylab("Latency (s)")+theme_classic(base_size =20)+scale_color_manual(values = c("0" = "salmon2", "1"= "cadetblue3"),labels = c('0' = "PE", "1" = "EE"), name = "Environment")+
   geom_point(aes(x=trial,y=Distance, color = env), size = 4)+ geom_errorbar(aes(x=trial, ymin = SEM_l,ymax=SEM_h, color = env), width =0.12, linewidth =0.8, alpha = 0.6)+
-  scale_linetype_manual(values = c("0" = "dashed", "1"= "solid"),labels=c("0" = "SAL", "1" = "CVAD"), name = "Treatment")+
+  scale_linetype_manual(values = c("1" = "dashed", "0"= "solid"),labels=c("1" = "SAL", "0" = "CVAD"), name = "Treatment")+
   guides(linetype = guide_legend(override.aes = list(linetype = c("dotted", "solid"))))+
+  scale_x_discrete(expand = expansion(mult = c(0.15, 0.15)))+
   theme(legend.text = element_text(size = 12),legend.title = element_text(size = 13),legend.key.size = unit(1, "lines"), legend.key.width = unit(1, "cm"))   
 
